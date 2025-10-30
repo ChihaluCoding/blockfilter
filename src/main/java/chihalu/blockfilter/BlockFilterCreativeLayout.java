@@ -13,8 +13,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
@@ -96,8 +94,8 @@ final class BlockFilterCreativeLayout {
 
         private static final List<CategoryDefinition> DEFINITIONS = List.of(
                         CategoryDefinition.builder("structure_wood", () -> new ItemStack(Items.OAK_PLANKS))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodConstruction)
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodFromNature)
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooPlank)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooPlank)
                                         .arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
                                         .build());
 
@@ -331,31 +329,18 @@ private static final class SourceRule {
 
 	// === filters ====================================================================================================
 
-	private static boolean isWoodConstruction(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		if (!(item instanceof net.minecraft.item.BlockItem blockItem)) {
-			return false;
-		}
+        private static boolean isWoodOrBambooPlank(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
 
-		Block block = blockItem.getBlock();
-		String path = pathOf(item);
-
-		return containsAny(path, "planks", "stairs", "slab", "fence", "gate", "door", "trapdoor", "pressure_plate",
-				"button", "log", "wood", "hyphae", "stem", "bamboo", "palisade", "railing", "beam")
-				|| block == Blocks.BOOKSHELF || block == Blocks.CHISELED_BOOKSHELF;
-	}
-
-	private static boolean isWoodFromNature(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		String path = pathOf(item);
-		return containsAny(path, "log", "wood", "leaves", "sapling", "fungus", "hyphae", "propagule", "bamboo", "vine", "moss", "azalea");
-	}
+                String path = pathOf(item);
+                return path.endsWith("_planks");
+        }
 
         private static boolean isStoneBlock(ItemStack stack) {
                 if (shouldOmit(stack)) {
