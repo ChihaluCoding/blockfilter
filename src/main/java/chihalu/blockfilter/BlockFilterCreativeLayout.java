@@ -95,54 +95,10 @@ final class BlockFilterCreativeLayout {
         };
 
         private static final List<CategoryDefinition> DEFINITIONS = List.of(
-                        CategoryDefinition.builder("dimension_nether", () -> new ItemStack(Items.NETHERRACK))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isNetherBlock)
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isNetherBlock)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("dimension_end", () -> new ItemStack(Items.END_STONE))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isEndBlock)
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isEndBlock)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
                         CategoryDefinition.builder("structure_wood", () -> new ItemStack(Items.OAK_PLANKS))
                                         .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodConstruction)
                                         .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodFromNature)
                                         .arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
-                                        .build(),
-                        CategoryDefinition.builder("structure_stone", () -> new ItemStack(Items.STONE_BRICKS))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("structure_sand", () -> new ItemStack(Items.SANDSTONE))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isSandBlock)
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isSandBlock)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("materials_copper", () -> new ItemStack(Items.COPPER_BLOCK))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
-                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("structure_misc", () -> new ItemStack(Items.QUARTZ_BRICKS))
-                                        .source(GROUP_BUILDING_BLOCKS, stack -> true)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("structure_colored", () -> new ItemStack(Items.RED_CONCRETE))
-                                        .source(GROUP_COLORED_BLOCKS, stack -> true)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("nature_resources", () -> new ItemStack(Items.GRASS_BLOCK))
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isOverworldNature)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("workstations_storage", () -> new ItemStack(Items.CRAFTING_TABLE))
-                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isWorkstationOrStorage)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
-                                        .build(),
-                        CategoryDefinition.builder("utility_mobility", () -> new ItemStack(Items.SCAFFOLDING))
-                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isUtilityBlock)
-                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
                                         .build());
 
 	private static LayoutSnapshot snapshot;
