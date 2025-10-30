@@ -96,6 +96,12 @@ final class BlockFilterCreativeLayout {
         private static final List<String> COPPER_SHAPE_ORDER = List.of(
                         "", "stairs", "slab", "door", "trapdoor", "bars", "grate", "bulb"
         );
+        private static final List<String> COPPER_VARIANT_ORDER = List.of(
+                        "", "exposed", "weathered", "oxidized", "waxed", "waxed_exposed", "waxed_weathered", "waxed_oxidized"
+        );
+        private static final Set<String> COPPER_STAGE_PREFIXES = Set.of(
+                        "exposed", "weathered", "oxidized"
+        );
         private static final Set<String> VARIANT_PREFIXES = Set.of(
                         "waxed", "exposed", "weathered", "oxidized", "stripped", "mossy", "cracked", "infested",
                         "chiseled", "smooth", "polished", "cut"
@@ -590,7 +596,7 @@ private static final class SourceRule {
                         }
 
                         String shape = detectCopperShape(path);
-                        String variant = detectVariantPrefix(path);
+                        String variant = detectCopperVariant(path);
 
                         byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
                                         .computeIfAbsent(variant, ignored -> new LinkedHashMap<>())
@@ -604,16 +610,43 @@ private static final class SourceRule {
                         if (variantBuckets == null || variantBuckets.isEmpty()) {
                                 continue;
                         }
-                        appendVariantBuckets(arranged, variantBuckets, COPPER_BASES);
+                        appendCopperVariantBuckets(arranged, variantBuckets);
                 }
 
                 for (Map<String, Map<String, List<ItemStack>>> remaining : byShape.values()) {
-                        appendVariantBuckets(arranged, remaining, COPPER_BASES);
+                        appendCopperVariantBuckets(arranged, remaining);
                 }
 
                 noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
                 arranged.addAll(noBase);
                 return arranged;
+        }
+
+        private static void appendCopperVariantBuckets(List<ItemStack> arranged,
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets) {
+                if (variantBuckets == null || variantBuckets.isEmpty()) {
+                        return;
+                }
+
+                Map<String, Map<String, List<ItemStack>>> workingBuckets = new LinkedHashMap<>(variantBuckets);
+
+                for (String variant : COPPER_VARIANT_ORDER) {
+                        Map<String, List<ItemStack>> baseBuckets = workingBuckets.remove(variant);
+                        if (baseBuckets == null || baseBuckets.isEmpty()) {
+                                continue;
+                        }
+                        appendBaseBuckets(arranged, new LinkedHashMap<>(baseBuckets), COPPER_BASES);
+                }
+
+                List<Map.Entry<String, Map<String, List<ItemStack>>>> leftovers = new ArrayList<>(workingBuckets.entrySet());
+                leftovers.sort(Map.Entry.comparingByKey());
+                for (Map.Entry<String, Map<String, List<ItemStack>>> entry : leftovers) {
+                        Map<String, List<ItemStack>> baseBuckets = entry.getValue();
+                        if (baseBuckets == null || baseBuckets.isEmpty()) {
+                                continue;
+                        }
+                        appendBaseBuckets(arranged, new LinkedHashMap<>(baseBuckets), COPPER_BASES);
+                }
         }
 
         private static void appendVariantBuckets(List<ItemStack> arranged,
@@ -770,6 +803,44 @@ private static final class SourceRule {
         private static String detectCopperShape(String path) {
                 String shape = shapeKey(path);
                 return shape.isEmpty() ? "" : shape;
+        }
+
+        private static String detectCopperVariant(String path) {
+                if (path.isEmpty()) {
+                        return "";
+                }
+
+                String[] parts = path.split("_");
+                if (parts.length == 0) {
+                        return "";
+                }
+
+                List<String> prefixes = new ArrayList<>();
+                for (String part : parts) {
+                        if (VARIANT_PREFIXES.contains(part)) {
+                                prefixes.add(part);
+                        } else {
+                                break;
+                        }
+                }
+
+                if (prefixes.isEmpty()) {
+                        return "";
+                }
+
+                String first = prefixes.get(0);
+                if ("waxed".equals(first)) {
+                        if (prefixes.size() >= 2 && COPPER_STAGE_PREFIXES.contains(prefixes.get(1))) {
+                                return "waxed_" + prefixes.get(1);
+                        }
+                        return "waxed";
+                }
+
+                if (COPPER_STAGE_PREFIXES.contains(first)) {
+                        return first;
+                }
+
+                return first;
         }
 
         private static String detectVariantPrefix(String path) {
