@@ -4,10 +4,7 @@
   "itemGroup.blockfilter.materials_copper": "銅コレクション",
   "itemGroup.blockfilter.structure_misc": "建築材・特殊ブロック",
   "itemGroup.blockfilter.structure_colored": "建築材・色ブロック",
-  "itemGroup.blockfilter.decor_lighting": "装飾・照明",
   "itemGroup.blockfilter.nature_resources": "自然資源",
   "itemGroup.blockfilter.workstations_storage": "作業台・収納設備",
-  "itemGroup.blockfilter.redstone_logic": "レッドストーン・機構",
-  "itemGroup.blockfilter.utility_mobility": "ユーティリティ・移動",
-  "itemGroup.blockfilter.miscellaneous": "その他"
+  "itemGroup.blockfilter.utility_mobility": "建築補助・ユーティリティ"
 }

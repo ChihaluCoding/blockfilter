@@ -4,10 +4,7 @@
   "itemGroup.blockfilter.materials_copper": "Copper Collection",
   "itemGroup.blockfilter.structure_misc": "Structure • Special Blocks",
   "itemGroup.blockfilter.structure_colored": "Structure • Colored Blocks",
-  "itemGroup.blockfilter.decor_lighting": "Decor & Lighting",
   "itemGroup.blockfilter.nature_resources": "Natural Resources",
   "itemGroup.blockfilter.workstations_storage": "Workstations & Storage",
-  "itemGroup.blockfilter.redstone_logic": "Redstone & Logic",
-  "itemGroup.blockfilter.utility_mobility": "Utility & Mobility",
-  "itemGroup.blockfilter.miscellaneous": "Everything Else"
+  "itemGroup.blockfilter.utility_mobility": "Utility • Building Aids"
 }

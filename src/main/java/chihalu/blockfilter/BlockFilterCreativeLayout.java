@@ -27,11 +27,7 @@ final class BlockFilterCreativeLayout {
 	private static final String GROUP_BUILDING_BLOCKS = "minecraft:building_blocks";
 	private static final String GROUP_COLORED_BLOCKS = "minecraft:colored_blocks";
 	private static final String GROUP_NATURAL_BLOCKS = "minecraft:natural_blocks";
-	private static final String GROUP_FUNCTIONAL_BLOCKS = "minecraft:functional_blocks";
-	private static final String GROUP_REDSTONE_BLOCKS = "minecraft:redstone_blocks";
-	private static final String GROUP_TOOLS = "minecraft:tools_and_utilities";
-
-	private static final Identifier MISCELLANEOUS_ID = Identifier.of(BlockFilter.MOD_ID, "miscellaneous");
+        private static final String GROUP_FUNCTIONAL_BLOCKS = "minecraft:functional_blocks";
 	private static final String[] COMBAT_KEYWORDS = {
 			"sword", "bow", "crossbow", "trident", "shield", "helmet", "chestplate", "leggings", "boots",
 			"horse_armor", "mace", "arrow", "totem"
@@ -82,28 +78,18 @@ final class BlockFilterCreativeLayout {
 			CategoryDefinition.builder("structure_misc", () -> new ItemStack(Items.QUARTZ_BRICKS))
 					.source(GROUP_BUILDING_BLOCKS, stack -> true)
 					.build(),
-			CategoryDefinition.builder("structure_colored", () -> new ItemStack(Items.RED_CONCRETE))
-					.source(GROUP_COLORED_BLOCKS, stack -> true)
-					.build(),
-			CategoryDefinition.builder("decor_lighting", () -> new ItemStack(Items.SEA_LANTERN))
-					.source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isDecorOrLighting)
-					.source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isDecorSurface)
-					.build(),
-			CategoryDefinition.builder("nature_resources", () -> new ItemStack(Items.GRASS_BLOCK))
-					.source(GROUP_NATURAL_BLOCKS, stack -> true)
-					.build(),
-			CategoryDefinition.builder("workstations_storage", () -> new ItemStack(Items.CRAFTING_TABLE))
-					.source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isWorkstationOrStorage)
-					.build(),
-			CategoryDefinition.builder("redstone_logic", () -> new ItemStack(Items.REDSTONE_BLOCK))
-					.source(GROUP_REDSTONE_BLOCKS, stack -> true)
-					.build(),
-			CategoryDefinition.builder("utility_mobility", () -> new ItemStack(Items.ELYTRA))
-					.source(GROUP_TOOLS, BlockFilterCreativeLayout::isUtilityOrMobilityItem)
-					.source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isUtilityBlock)
-					.build(),
-			CategoryDefinition.builder(MISCELLANEOUS_ID, () -> new ItemStack(Items.CHEST))
-					.build());
+                        CategoryDefinition.builder("structure_colored", () -> new ItemStack(Items.RED_CONCRETE))
+                                        .source(GROUP_COLORED_BLOCKS, stack -> true)
+                                        .build(),
+                        CategoryDefinition.builder("nature_resources", () -> new ItemStack(Items.GRASS_BLOCK))
+                                        .source(GROUP_NATURAL_BLOCKS, stack -> true)
+                                        .build(),
+                        CategoryDefinition.builder("workstations_storage", () -> new ItemStack(Items.CRAFTING_TABLE))
+                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isWorkstationOrStorage)
+                                        .build(),
+                        CategoryDefinition.builder("utility_mobility", () -> new ItemStack(Items.SCAFFOLDING))
+                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isUtilityBlock)
+                                        .build());
 
 	private static LayoutSnapshot snapshot;
 
@@ -125,11 +111,7 @@ final class BlockFilterCreativeLayout {
 		snapshot = null;
 	}
 
-	static Identifier miscellaneousId() {
-		return MISCELLANEOUS_ID;
-	}
-
-		static final class CategoryDefinition {
+                static final class CategoryDefinition {
 		private final Identifier identifier;
 		private final Supplier<ItemStack> iconSupplier;
 		private final List<SourceRule> sources;
@@ -275,24 +257,8 @@ private static final class SourceRule {
 				byCategory.put(definition.identifier(), List.copyOf(extracted));
 			}
 
-			List<ItemStack> leftovers = new ArrayList<>();
-			for (List<ItemStack> list : pools.values()) {
-				for (ItemStack stack : list) {
-					if (!shouldOmit(stack)) {
-						leftovers.add(stack.copy());
-					}
-				}
-			}
-
-			if (!leftovers.isEmpty()) {
-				Identifier miscId = MISCELLANEOUS_ID;
-				List<ItemStack> existing = new ArrayList<>(byCategory.getOrDefault(miscId, List.of()));
-				existing.addAll(leftovers);
-				byCategory.put(miscId, List.copyOf(existing));
-			}
-
-			return new LayoutSnapshot(context.enabledFeatures(), context.hasPermissions(), Collections.unmodifiableMap(byCategory));
-		}
+                        return new LayoutSnapshot(context.enabledFeatures(), context.hasPermissions(), Collections.unmodifiableMap(byCategory));
+                }
 
 		boolean matches(FeatureSet currentFeatures, boolean currentPermissions) {
 			return hasPermissions == currentPermissions && features.equals(currentFeatures);
@@ -396,34 +362,7 @@ private static final class SourceRule {
 				"cobblestone", "mud_brick", "resin", "prismarine", "quartz");
 	}
 
-	private static boolean isDecorSurface(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		if (!(item instanceof net.minecraft.item.BlockItem)) {
-			return false;
-		}
-
-		String path = pathOf(item);
-		return containsAny(path, "glass", "pane", "lantern", "torch", "candle", "lamp", "glow", "light", "bell",
-				"chain", "chandelier", "flower_pot", "flower", "petals", "vines", "curtain", "banner", "bed", "carpet",
-				"shroomlight", "frog_light");
-	}
-
-	private static boolean isDecorOrLighting(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		String path = pathOf(item);
-		return containsAny(path, "torch", "lantern", "lamp", "bulb", "campfire", "candle", "chain", "bell", "frame",
-				"painting", "glowstone", "shroomlight", "frog_light")
-				|| item == Items.DECORATED_POT || item == Items.FLOWER_POT || item == Items.GLOW_ITEM_FRAME
-				|| item == Items.ITEM_FRAME;
-	}
-
-	private static boolean isWorkstationOrStorage(ItemStack stack) {
+        private static boolean isWorkstationOrStorage(ItemStack stack) {
 		if (shouldOmit(stack)) {
 			return false;
 		}
@@ -456,23 +395,6 @@ private static final class SourceRule {
 
 	private static boolean isCopperItem(ItemStack stack) {
 		return pathOf(stack.getItem()).contains("copper");
-	}
-
-	private static boolean isUtilityOrMobilityItem(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		String path = pathOf(item);
-		return containsAny(path, "bucket", "boat", "raft", "minecart", "elytra", "spyglass", "compass", "clock", "saddle",
-				"lead", "name_tag", "bundle", "balloon", "parachute", "firework", "rocket", "star", "map")
-				|| item == Items.RECOVERY_COMPASS
-				|| item == Items.ELYTRA
-				|| item == Items.LEAD
-				|| item == Items.NAME_TAG
-				|| item == Items.SADDLE
-				|| item == Items.FIREWORK_ROCKET
-				|| item == Items.FIREWORK_STAR;
 	}
 
 	private static String pathOf(Item item) {
