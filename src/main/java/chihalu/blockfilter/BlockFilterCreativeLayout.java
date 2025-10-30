@@ -75,7 +75,7 @@ final class BlockFilterCreativeLayout {
                         "mosaic", "log", "wood", "stem", "hyphae", "boat", "chest_boat",
                         "raft", "chest_raft", "leaves", "sapling", "propagule", "roots", "fungus",
                         "panel", "tile", "tiles", "bricks", "brick", "pane", "glass", "bars",
-                        "torch", "lantern", "campfire", "beacon"
+                        "torch", "lantern", "campfire", "beacon", "grate", "bulb"
         );
         private static final List<String> STONE_BASES = List.of(
                         "stone", "smooth_stone", "stone_brick", "stone_bricks", "cobblestone", "granite", "polished_granite",
@@ -89,6 +89,12 @@ final class BlockFilterCreativeLayout {
         );
         private static final List<String> STONE_SHAPE_ORDER = List.of(
                         "", "bricks", "tiles", "pillar", "stairs", "slab", "wall", "pressure_plate", "button"
+        );
+        private static final List<String> COPPER_BASES = List.of(
+                        "copper_block", "cut_copper", "chiseled_copper", "copper", "raw_copper_block"
+        );
+        private static final List<String> COPPER_SHAPE_ORDER = List.of(
+                        "", "stairs", "slab", "door", "trapdoor", "bars", "grate", "bulb"
         );
         private static final Set<String> VARIANT_PREFIXES = Set.of(
                         "waxed", "exposed", "weathered", "oxidized", "stripped", "mossy", "cracked", "infested",
@@ -115,6 +121,11 @@ final class BlockFilterCreativeLayout {
                                         .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
                                         .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
                                         .arranger(BlockFilterCreativeLayout::arrangeStoneBlocks)
+                                        .build(),
+                        CategoryDefinition.builder("structure_copper", () -> new ItemStack(Items.COPPER_BLOCK))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isCopperBlock)
+                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isCopperBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeCopperBlocks)
                                         .build());
 
 	private static LayoutSnapshot snapshot;
@@ -396,22 +407,35 @@ private static final class SourceRule {
 				|| item == Items.ENDER_CHEST;
 	}
 
-	private static boolean isUtilityBlock(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
-		Item item = stack.getItem();
-		if (!(item instanceof net.minecraft.item.BlockItem)) {
-			return false;
-		}
+        private static boolean isUtilityBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
 
-		String path = pathOf(item);
-		return containsAny(path, "scaffolding", "ladder", "rail", "path", "door_mat", "bell", "waystone", "sign",
-				"hanging_sign", "crate") || item == Items.BEACON;
-	}
+                String path = pathOf(item);
+                return containsAny(path, "scaffolding", "ladder", "rail", "path", "door_mat", "bell", "waystone", "sign",
+                                "hanging_sign", "crate") || item == Items.BEACON;
+        }
 
-        private static boolean isCopperItem(ItemStack stack) {
-                return pathOf(stack.getItem()).contains("copper");
+        private static boolean isCopperBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
+
+                String path = pathOf(item);
+                if (!path.contains("copper") || path.contains("ore")) {
+                        return false;
+                }
+
+                return !detectCopperBase(path).isEmpty();
         }
 
         private static boolean isNetherBlock(ItemStack stack) {
@@ -553,6 +577,45 @@ private static final class SourceRule {
                 return arranged;
         }
 
+        private static List<ItemStack> arrangeCopperBlocks(List<ItemStack> stacks) {
+                Map<String, Map<String, Map<String, List<ItemStack>>>> byShape = new LinkedHashMap<>();
+                List<ItemStack> noBase = new ArrayList<>();
+
+                for (ItemStack stack : stacks) {
+                        String path = pathOf(stack.getItem());
+                        String base = detectCopperBase(path);
+                        if (base.isEmpty()) {
+                                noBase.add(stack);
+                                continue;
+                        }
+
+                        String shape = detectCopperShape(path);
+                        String variant = detectVariantPrefix(path);
+
+                        byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(variant, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
+                }
+
+                List<ItemStack> arranged = new ArrayList<>();
+
+                for (String shape : COPPER_SHAPE_ORDER) {
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets = byShape.remove(shape);
+                        if (variantBuckets == null || variantBuckets.isEmpty()) {
+                                continue;
+                        }
+                        appendVariantBuckets(arranged, variantBuckets, COPPER_BASES);
+                }
+
+                for (Map<String, Map<String, List<ItemStack>>> remaining : byShape.values()) {
+                        appendVariantBuckets(arranged, remaining, COPPER_BASES);
+                }
+
+                noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+                arranged.addAll(noBase);
+                return arranged;
+        }
+
         private static void appendVariantBuckets(List<ItemStack> arranged,
                         Map<String, Map<String, List<ItemStack>>> variantBuckets, List<String> baseOrder) {
                 Map<String, List<ItemStack>> baseBuckets = variantBuckets.remove("");
@@ -668,6 +731,43 @@ private static final class SourceRule {
         }
 
         private static String detectStoneShape(String path) {
+                String shape = shapeKey(path);
+                return shape.isEmpty() ? "" : shape;
+        }
+
+        private static String detectCopperBase(String path) {
+                if (path.isEmpty()) {
+                        return "";
+                }
+
+                String normalized = normalizedVariantKey(path);
+                String baseCandidate = normalized;
+                for (String suffix : COMMON_SHAPE_SUFFIXES) {
+                        if (baseCandidate.endsWith("_" + suffix)) {
+                                baseCandidate = baseCandidate.substring(0, baseCandidate.length() - suffix.length() - 1);
+                                break;
+                        }
+                }
+
+                String best = "";
+                int bestLength = -1;
+                List<String> candidates = List.of(path, normalized, baseCandidate);
+                for (String candidate : candidates) {
+                        if (candidate.isEmpty()) {
+                                continue;
+                        }
+                        for (String base : COPPER_BASES) {
+                                if (matchesSegment(candidate, base) && base.length() > bestLength) {
+                                        best = base;
+                                        bestLength = base.length();
+                                }
+                        }
+                }
+
+                return best;
+        }
+
+        private static String detectCopperShape(String path) {
                 String shape = shapeKey(path);
                 return shape.isEmpty() ? "" : shape;
         }
