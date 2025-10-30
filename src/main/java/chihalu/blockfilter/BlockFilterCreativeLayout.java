@@ -77,6 +77,19 @@ final class BlockFilterCreativeLayout {
                         "panel", "tile", "tiles", "bricks", "brick", "pane", "glass", "bars",
                         "torch", "lantern", "campfire", "beacon"
         );
+        private static final List<String> STONE_BASES = List.of(
+                        "stone", "smooth_stone", "stone_brick", "stone_bricks", "cobblestone", "granite", "polished_granite",
+                        "diorite", "polished_diorite", "andesite", "polished_andesite", "tuff", "polished_tuff", "calcite",
+                        "dripstone_block", "basalt", "smooth_basalt", "blackstone", "polished_blackstone",
+                        "polished_blackstone_brick", "polished_blackstone_bricks", "blackstone_brick", "blackstone_bricks",
+                        "deepslate", "cobbled_deepslate", "polished_deepslate", "deepslate_brick", "deepslate_bricks",
+                        "deepslate_tile", "deepslate_tiles", "mud_brick", "mud_bricks", "packed_mud", "quartz", "smooth_quartz",
+                        "quartz_brick", "quartz_bricks", "cut_quartz", "end_stone", "end_stone_bricks", "purpur", "prismarine",
+                        "prismarine_bricks", "dark_prismarine", "resin_bricks"
+        );
+        private static final List<String> STONE_SHAPE_ORDER = List.of(
+                        "", "bricks", "tiles", "pillar", "stairs", "slab", "wall", "pressure_plate", "button"
+        );
         private static final Set<String> VARIANT_PREFIXES = Set.of(
                         "waxed", "exposed", "weathered", "oxidized", "stripped", "mossy", "cracked", "infested",
                         "chiseled", "smooth", "polished", "cut"
@@ -97,6 +110,11 @@ final class BlockFilterCreativeLayout {
                                         .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooStructure)
                                         .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooStructure)
                                         .arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
+                                        .build(),
+                        CategoryDefinition.builder("structure_stone", () -> new ItemStack(Items.STONE))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeStoneBlocks)
                                         .build());
 
 	private static LayoutSnapshot snapshot;
@@ -468,7 +486,7 @@ private static final class SourceRule {
                                 continue;
                         }
 
-                        String variant = detectWoodVariant(path);
+                        String variant = detectVariantPrefix(path);
 
                         byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
                                         .computeIfAbsent(variant, ignored -> new LinkedHashMap<>())
@@ -482,14 +500,53 @@ private static final class SourceRule {
                         if (variantBuckets == null || variantBuckets.isEmpty()) {
                                 continue;
                         }
-                        appendVariantBuckets(arranged, variantBuckets);
+                        appendVariantBuckets(arranged, variantBuckets, WOOD_BASES);
                 }
 
                 for (Map<String, Map<String, List<ItemStack>>> remaining : byShape.values()) {
-                        appendVariantBuckets(arranged, remaining);
+                        appendVariantBuckets(arranged, remaining, WOOD_BASES);
                 }
 
-                appendBaseBuckets(arranged, byBaseFallback);
+                appendBaseBuckets(arranged, byBaseFallback, WOOD_BASES);
+
+                noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+                arranged.addAll(noBase);
+                return arranged;
+        }
+
+        private static List<ItemStack> arrangeStoneBlocks(List<ItemStack> stacks) {
+                Map<String, Map<String, Map<String, List<ItemStack>>>> byShape = new LinkedHashMap<>();
+                List<ItemStack> noBase = new ArrayList<>();
+
+                for (ItemStack stack : stacks) {
+                        String path = pathOf(stack.getItem());
+                        String base = detectStoneBase(path);
+                        if (base.isEmpty()) {
+                                noBase.add(stack);
+                                continue;
+                        }
+
+                        String shape = detectStoneShape(path);
+                        String variant = detectVariantPrefix(path);
+
+                        byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(variant, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
+                }
+
+                List<ItemStack> arranged = new ArrayList<>();
+
+                for (String shape : STONE_SHAPE_ORDER) {
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets = byShape.remove(shape);
+                        if (variantBuckets == null || variantBuckets.isEmpty()) {
+                                continue;
+                        }
+                        appendVariantBuckets(arranged, variantBuckets, STONE_BASES);
+                }
+
+                for (Map<String, Map<String, List<ItemStack>>> remaining : byShape.values()) {
+                        appendVariantBuckets(arranged, remaining, STONE_BASES);
+                }
 
                 noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
                 arranged.addAll(noBase);
@@ -497,10 +554,10 @@ private static final class SourceRule {
         }
 
         private static void appendVariantBuckets(List<ItemStack> arranged,
-                        Map<String, Map<String, List<ItemStack>>> variantBuckets) {
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets, List<String> baseOrder) {
                 Map<String, List<ItemStack>> baseBuckets = variantBuckets.remove("");
                 if (baseBuckets != null && !baseBuckets.isEmpty()) {
-                        appendBaseBuckets(arranged, baseBuckets);
+                        appendBaseBuckets(arranged, baseBuckets, baseOrder);
                 }
 
                 List<Map.Entry<String, Map<String, List<ItemStack>>>> leftovers = new ArrayList<>(variantBuckets.entrySet());
@@ -510,12 +567,13 @@ private static final class SourceRule {
                         if (buckets == null || buckets.isEmpty()) {
                                 continue;
                         }
-                        appendBaseBuckets(arranged, buckets);
+                        appendBaseBuckets(arranged, buckets, baseOrder);
                 }
         }
 
-        private static void appendBaseBuckets(List<ItemStack> arranged, Map<String, List<ItemStack>> baseBuckets) {
-                for (String base : WOOD_BASES) {
+        private static void appendBaseBuckets(List<ItemStack> arranged, Map<String, List<ItemStack>> baseBuckets,
+                        List<String> preferredOrder) {
+                for (String base : preferredOrder) {
                         List<ItemStack> bucket = baseBuckets.remove(base);
                         if (bucket == null || bucket.isEmpty()) {
                                 continue;
@@ -562,16 +620,59 @@ private static final class SourceRule {
 		return best;
 	}
 
-	private static String detectWoodShape(String path) {
-		for (String shape : WOOD_SHAPE_ORDER) {
-			if (matchesSegment(path, shape)) {
-				return shape;
-			}
+        private static String detectWoodShape(String path) {
+                for (String shape : WOOD_SHAPE_ORDER) {
+                        if (matchesSegment(path, shape)) {
+                                return shape;
+                        }
                 }
                 return "";
         }
 
-        private static String detectWoodVariant(String path) {
+        private static String detectStoneBase(String path) {
+                if (path.isEmpty()) {
+                        return "";
+                }
+
+                String normalized = normalizedVariantKey(path);
+                String baseCandidate = normalized;
+                for (String suffix : COMMON_SHAPE_SUFFIXES) {
+                        if (baseCandidate.endsWith("_" + suffix)) {
+                                baseCandidate = baseCandidate.substring(0, baseCandidate.length() - suffix.length() - 1);
+                                break;
+                        }
+                }
+
+                String best = "";
+                int bestLength = -1;
+                List<String> candidates = List.of(path, normalized, baseCandidate);
+                for (String candidate : candidates) {
+                        if (candidate.isEmpty()) {
+                                continue;
+                        }
+                        for (String base : STONE_BASES) {
+                                if (matchesSegment(candidate, base) && base.length() > bestLength) {
+                                        best = base;
+                                        bestLength = base.length();
+                                }
+                        }
+                }
+
+                if (!best.isEmpty()) {
+                        return best;
+                }
+                if (!baseCandidate.isEmpty()) {
+                        return baseCandidate;
+                }
+                return normalized;
+        }
+
+        private static String detectStoneShape(String path) {
+                String shape = shapeKey(path);
+                return shape.isEmpty() ? "" : shape;
+        }
+
+        private static String detectVariantPrefix(String path) {
                 if (path.isEmpty()) {
                         return "";
                 }
