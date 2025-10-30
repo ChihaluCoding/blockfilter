@@ -450,68 +450,74 @@ private static final class SourceRule {
         }
 
         private static List<ItemStack> arrangeWoodStructures(List<ItemStack> stacks) {
-		Map<String, List<ItemStack>> byBase = new LinkedHashMap<>();
-		List<ItemStack> noBase = new ArrayList<>();
+                Map<String, Map<String, List<ItemStack>>> byShape = new LinkedHashMap<>();
+                Map<String, List<ItemStack>> byBaseFallback = new LinkedHashMap<>();
+                List<ItemStack> noBase = new ArrayList<>();
 
-		for (ItemStack stack : stacks) {
-			String path = pathOf(stack.getItem());
-			String base = detectWoodBase(path);
-			if (base.isEmpty()) {
-				noBase.add(stack);
-				continue;
-			}
-			byBase.computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
-		}
+                for (ItemStack stack : stacks) {
+                        String path = pathOf(stack.getItem());
+                        String base = detectWoodBase(path);
+                        if (base.isEmpty()) {
+                                noBase.add(stack);
+                                continue;
+                        }
 
-		List<ItemStack> arranged = new ArrayList<>();
-		for (String base : WOOD_BASES) {
-			List<ItemStack> baseStacks = byBase.remove(base);
-			if (baseStacks == null || baseStacks.isEmpty()) {
-				continue;
-			}
-			arranged.addAll(arrangeWoodShapes(baseStacks));
-		}
+                        String shape = detectWoodShape(path);
+                        if (shape.isEmpty()) {
+                                byBaseFallback.computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
+                                continue;
+                        }
 
-		for (List<ItemStack> remaining : byBase.values()) {
-			arranged.addAll(arrangeWoodShapes(remaining));
-		}
+                        byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
+                }
 
-		noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
-		arranged.addAll(noBase);
-		return arranged;
-	}
+                List<ItemStack> arranged = new ArrayList<>();
 
-	private static List<ItemStack> arrangeWoodShapes(List<ItemStack> stacks) {
-		Map<String, List<ItemStack>> byShape = new LinkedHashMap<>();
-		List<ItemStack> unknown = new ArrayList<>();
-		for (ItemStack stack : stacks) {
-			String shape = detectWoodShape(pathOf(stack.getItem()));
-			if (shape.isEmpty()) {
-				unknown.add(stack);
-				continue;
-			}
-			byShape.computeIfAbsent(shape, ignored -> new ArrayList<>()).add(stack);
-		}
+                for (String shape : WOOD_SHAPE_ORDER) {
+                        Map<String, List<ItemStack>> baseBuckets = byShape.remove(shape);
+                        if (baseBuckets == null || baseBuckets.isEmpty()) {
+                                continue;
+                        }
+                        appendBaseBuckets(arranged, baseBuckets);
+                }
 
-		List<ItemStack> ordered = new ArrayList<>();
-		for (String shape : WOOD_SHAPE_ORDER) {
-			List<ItemStack> bucket = byShape.remove(shape);
-			if (bucket == null || bucket.isEmpty()) {
-				continue;
-			}
-			bucket.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
-			ordered.addAll(bucket);
-		}
+                for (Map<String, List<ItemStack>> remaining : byShape.values()) {
+                        appendBaseBuckets(arranged, remaining);
+                }
 
-		for (List<ItemStack> bucket : byShape.values()) {
-			bucket.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
-			ordered.addAll(bucket);
-		}
+                appendBaseBuckets(arranged, byBaseFallback);
 
-		unknown.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
-		ordered.addAll(unknown);
-		return ordered;
-	}
+                noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+                arranged.addAll(noBase);
+                return arranged;
+        }
+
+        private static void appendBaseBuckets(List<ItemStack> arranged, Map<String, List<ItemStack>> baseBuckets) {
+                for (String base : WOOD_BASES) {
+                        List<ItemStack> bucket = baseBuckets.remove(base);
+                        if (bucket == null || bucket.isEmpty()) {
+                                continue;
+                        }
+                        sortByPath(bucket);
+                        arranged.addAll(bucket);
+                }
+
+                List<Map.Entry<String, List<ItemStack>>> leftovers = new ArrayList<>(baseBuckets.entrySet());
+                leftovers.sort(Map.Entry.comparingByKey());
+                for (Map.Entry<String, List<ItemStack>> entry : leftovers) {
+                        List<ItemStack> bucket = entry.getValue();
+                        if (bucket == null || bucket.isEmpty()) {
+                                continue;
+                        }
+                        sortByPath(bucket);
+                        arranged.addAll(bucket);
+                }
+        }
+
+        private static void sortByPath(List<ItemStack> bucket) {
+                bucket.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+        }
 
         private static List<ItemStack> arrangeVariants(List<ItemStack> stacks) {
                 List<ItemStack> arranged = new ArrayList<>(stacks);
