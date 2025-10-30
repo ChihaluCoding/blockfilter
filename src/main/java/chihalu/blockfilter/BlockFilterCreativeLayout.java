@@ -94,8 +94,8 @@ final class BlockFilterCreativeLayout {
 
         private static final List<CategoryDefinition> DEFINITIONS = List.of(
                         CategoryDefinition.builder("structure_wood", () -> new ItemStack(Items.OAK_PLANKS))
-                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooPlank)
-                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooPlank)
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooStructure)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodOrBambooStructure)
                                         .arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
                                         .build());
 
@@ -329,17 +329,21 @@ private static final class SourceRule {
 
 	// === filters ====================================================================================================
 
-        private static boolean isWoodOrBambooPlank(ItemStack stack) {
+        private static boolean isWoodOrBambooStructure(ItemStack stack) {
                 if (shouldOmit(stack)) {
                         return false;
                 }
                 Item item = stack.getItem();
-                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                String path = pathOf(item);
+                if (detectWoodBase(path).isEmpty()) {
                         return false;
                 }
 
-                String path = pathOf(item);
-                return path.endsWith("_planks");
+                if (item instanceof net.minecraft.item.BlockItem) {
+                        return true;
+                }
+
+                return !detectWoodShape(path).isEmpty();
         }
 
         private static boolean isStoneBlock(ItemStack stack) {
