@@ -3,7 +3,8 @@
 	"package": "chihalu.blockfilter.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"CreativeInventoryScreenMixin"
+		"ItemGroupAccessor",
+		"ItemGroupsAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

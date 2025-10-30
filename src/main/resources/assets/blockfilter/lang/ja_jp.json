@@ -1,6 +1,13 @@
 {
-  "gui.blockfilter.creative.filter_off": "フィルター",
-  "gui.blockfilter.creative.filter_on": "通常タブ",
-  "itemGroup.blockfilter.recent_blocks": "最近使ったブロック",
-  "itemGroup.blockfilter.biomes": "バイオーム"
+  "itemGroup.blockfilter.structure_wood": "建築材・木と自然",
+  "itemGroup.blockfilter.structure_masonry": "建築材・石と鉱物",
+  "itemGroup.blockfilter.materials_copper": "銅コレクション",
+  "itemGroup.blockfilter.structure_misc": "建築材・特殊ブロック",
+  "itemGroup.blockfilter.structure_colored": "建築材・色ブロック",
+  "itemGroup.blockfilter.decor_lighting": "装飾・照明",
+  "itemGroup.blockfilter.nature_resources": "自然資源",
+  "itemGroup.blockfilter.workstations_storage": "作業台・収納設備",
+  "itemGroup.blockfilter.redstone_logic": "レッドストーン・機構",
+  "itemGroup.blockfilter.utility_mobility": "ユーティリティ・移動",
+  "itemGroup.blockfilter.miscellaneous": "その他"
 }
