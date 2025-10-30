@@ -1,8 +1,8 @@
 package chihalu.blockfilter;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,8 +63,26 @@ final class BlockFilterCreativeLayout {
                         "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "crimson", "warped", "bamboo",
                         "cherry", "pale_oak"
         );
-        private static final List<String> WOOD_SHAPE_SUFFIXES = List.of("stairs", "slab", "planks");
-        private static final Set<String> VARIANT_PREFIXES = Set.of("waxed", "exposed", "weathered", "oxidized");
+        private static final List<String> WOOD_SHAPE_ORDER = List.of(
+                        "log", "wood", "stem", "hyphae",
+                        "planks", "mosaic", "stairs", "slab",
+                        "fence", "fence_gate", "door", "trapdoor", "pressure_plate", "button",
+                        "sign", "wall_sign", "hanging_sign",
+                        "boat", "chest_boat", "raft", "chest_raft",
+                        "leaves", "sapling", "propagule", "roots", "fungus"
+        );
+        private static final List<String> COMMON_SHAPE_SUFFIXES = List.of(
+                        "pressure_plate", "fence_gate", "hanging_sign", "wall_sign", "trapdoor", "door",
+                        "stairs", "slab", "button", "fence", "gate", "wall", "pillar", "planks",
+                        "mosaic", "log", "wood", "stem", "hyphae", "boat", "chest_boat",
+                        "raft", "chest_raft", "leaves", "sapling", "propagule", "roots", "fungus",
+                        "panel", "tile", "tiles", "bricks", "brick", "pane", "glass", "bars",
+                        "torch", "lantern", "campfire", "beacon"
+        );
+        private static final Set<String> VARIANT_PREFIXES = Set.of(
+                        "waxed", "exposed", "weathered", "oxidized", "stripped", "mossy", "cracked", "infested",
+                        "chiseled", "smooth", "polished", "cut"
+        );
         private static final String[] NETHER_KEYWORDS = {
                         "nether", "crimson", "warped", "basalt", "blackstone", "quartz", "soul", "magma", "shroomlight",
                         "ancient_debris", "nylium", "fungus", "roots", "wart"
@@ -487,60 +505,132 @@ private static final class SourceRule {
         }
 
         private static List<ItemStack> arrangeWoodStructures(List<ItemStack> stacks) {
-		Map<String, Map<String, ItemStack>> table = new LinkedHashMap<>();
-		for (String base : WOOD_BASES) {
-			table.put(base, new LinkedHashMap<>());
-		}
-
-		List<ItemStack> leftovers = new ArrayList<>();
+		Map<String, List<ItemStack>> byBase = new LinkedHashMap<>();
+		List<ItemStack> noBase = new ArrayList<>();
 
 		for (ItemStack stack : stacks) {
 			String path = pathOf(stack.getItem());
-			boolean assigned = false;
-
-			for (String base : WOOD_BASES) {
-				if (!path.contains(base)) {
-					continue;
-				}
-
-				for (String suffix : WOOD_SHAPE_SUFFIXES) {
-					if (path.endsWith("_" + suffix) || path.equals(base + "_" + suffix)) {
-						table.get(base).putIfAbsent(suffix, stack);
-						assigned = true;
-						break;
-					}
-				}
-
-				if (assigned) {
-					break;
-				}
+			String base = detectWoodBase(path);
+			if (base.isEmpty()) {
+				noBase.add(stack);
+				continue;
 			}
-
-			if (!assigned) {
-				leftovers.add(stack);
-			}
+			byBase.computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
 		}
 
 		List<ItemStack> arranged = new ArrayList<>();
-		for (String suffix : WOOD_SHAPE_SUFFIXES) {
-			for (String base : WOOD_BASES) {
-				ItemStack stack = table.get(base).get(suffix);
-				if (stack != null) {
-					arranged.add(stack);
-				}
+		for (String base : WOOD_BASES) {
+			List<ItemStack> baseStacks = byBase.remove(base);
+			if (baseStacks == null || baseStacks.isEmpty()) {
+				continue;
 			}
+			arranged.addAll(arrangeWoodShapes(baseStacks));
 		}
 
-                arranged.addAll(arrangeVariants(leftovers));
-                return arranged;
-        }
+		for (List<ItemStack> remaining : byBase.values()) {
+			arranged.addAll(arrangeWoodShapes(remaining));
+		}
+
+		noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+		arranged.addAll(noBase);
+		return arranged;
+	}
+
+	private static List<ItemStack> arrangeWoodShapes(List<ItemStack> stacks) {
+		Map<String, List<ItemStack>> byShape = new LinkedHashMap<>();
+		List<ItemStack> unknown = new ArrayList<>();
+		for (ItemStack stack : stacks) {
+			String shape = detectWoodShape(pathOf(stack.getItem()));
+			if (shape.isEmpty()) {
+				unknown.add(stack);
+				continue;
+			}
+			byShape.computeIfAbsent(shape, ignored -> new ArrayList<>()).add(stack);
+		}
+
+		List<ItemStack> ordered = new ArrayList<>();
+		for (String shape : WOOD_SHAPE_ORDER) {
+			List<ItemStack> bucket = byShape.remove(shape);
+			if (bucket == null || bucket.isEmpty()) {
+				continue;
+			}
+			bucket.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+			ordered.addAll(bucket);
+		}
+
+		for (List<ItemStack> bucket : byShape.values()) {
+			bucket.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+			ordered.addAll(bucket);
+		}
+
+		unknown.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
+		ordered.addAll(unknown);
+		return ordered;
+	}
 
         private static List<ItemStack> arrangeVariants(List<ItemStack> stacks) {
                 List<ItemStack> arranged = new ArrayList<>(stacks);
-                arranged.sort(Comparator.comparing((ItemStack stack) -> normalizedVariantKey(pathOf(stack.getItem())))
-                                .thenComparing(stack -> pathOf(stack.getItem())));
+                arranged.sort(Comparator
+				.comparing((ItemStack stack) -> familyKey(pathOf(stack.getItem())))
+				.thenComparing(stack -> shapeKey(pathOf(stack.getItem())))
+				.thenComparing(stack -> normalizedVariantKey(pathOf(stack.getItem())))
+				.thenComparing(stack -> pathOf(stack.getItem())));
                 return arranged;
         }
+
+	private static String detectWoodBase(String path) {
+		String best = "";
+		int bestLength = -1;
+		for (String base : WOOD_BASES) {
+			if (matchesSegment(path, base) && base.length() > bestLength) {
+				best = base;
+				bestLength = base.length();
+			}
+		}
+		return best;
+	}
+
+	private static String detectWoodShape(String path) {
+		for (String shape : WOOD_SHAPE_ORDER) {
+			if (matchesSegment(path, shape)) {
+				return shape;
+			}
+		}
+		return "";
+	}
+
+	private static String familyKey(String path) {
+		String normalized = normalizedVariantKey(path);
+		for (String suffix : COMMON_SHAPE_SUFFIXES) {
+			if (normalized.endsWith("_" + suffix)) {
+				return normalized.substring(0, normalized.length() - suffix.length() - 1);
+			}
+		}
+		return normalized;
+	}
+
+	private static String shapeKey(String path) {
+		String normalized = normalizedVariantKey(path);
+		for (String suffix : COMMON_SHAPE_SUFFIXES) {
+			if (normalized.endsWith("_" + suffix)) {
+				return suffix;
+			}
+		}
+		return "";
+	}
+
+	private static boolean matchesSegment(String path, String segment) {
+		if (segment.isEmpty()) {
+			return false;
+		}
+		if (path.equals(segment)) {
+			return true;
+		}
+		if (path.startsWith(segment + "_") || path.endsWith("_" + segment)) {
+			return true;
+		}
+		return path.contains("_" + segment + "_");
+	}
 
         private static String normalizedVariantKey(String path) {
                 if (path.isEmpty()) {
