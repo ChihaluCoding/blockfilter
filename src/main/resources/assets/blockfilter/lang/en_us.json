@@ -1,0 +1,6 @@
+{
+  "gui.blockfilter.creative.filter_off": "Filter",
+  "gui.blockfilter.creative.filter_on": "Back",
+  "itemGroup.blockfilter.recent_blocks": "Recent Blocks",
+  "itemGroup.blockfilter.biomes": "Biomes"
+}
