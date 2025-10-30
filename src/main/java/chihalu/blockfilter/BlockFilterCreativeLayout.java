@@ -2,10 +2,13 @@ package chihalu.blockfilter;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -41,10 +44,10 @@ final class BlockFilterCreativeLayout {
 	private static final String[] PATTERN_KEYWORDS = {
 			"pattern", "trim", "template", "sherd", "fragment", "banner"
 	};
-	private static final String[] HARNESS_KEYWORDS = {
-			"saddle", "lead", "name_tag", "rein", "harness"
-	};
-	private static final String[] FOOD_KEYWORDS = {
+        private static final String[] HARNESS_KEYWORDS = {
+                        "saddle", "lead", "name_tag", "rein", "harness"
+        };
+        private static final String[] FOOD_KEYWORDS = {
 			"apple", "bread", "carrot", "potato", "beetroot", "melon", "pumpkin", "cake", "pie", "cookie", "berries",
 			"sweet_berries", "glow_berries", "chorus_fruit", "golden_apple", "honey", "meat", "pork", "beef", "chicken",
 			"mutton", "rabbit", "cod", "salmon", "tropical_fish", "pufferfish", "stew", "soup", "suspicious_stew",
@@ -56,39 +59,72 @@ final class BlockFilterCreativeLayout {
 			"blaze_powder", "blaze_rod", "rabbit_foot", "phantom_membrane", "prismarine_shard", "prismarine_crystals",
 			"heart_of_the_sea", "nether_star", "echo_shard", "amethyst_shard"
 	};
-	private static final List<String> WOOD_BASES = List.of(
-			"oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "crimson", "warped", "bamboo",
-			"cherry", "pale_oak"
-	);
-	private static final List<String> WOOD_SHAPE_SUFFIXES = List.of("stairs", "slab", "planks");
+        private static final List<String> WOOD_BASES = List.of(
+                        "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "crimson", "warped", "bamboo",
+                        "cherry", "pale_oak"
+        );
+        private static final List<String> WOOD_SHAPE_SUFFIXES = List.of("stairs", "slab", "planks");
+        private static final Set<String> VARIANT_PREFIXES = Set.of("waxed", "exposed", "weathered", "oxidized");
+        private static final String[] NETHER_KEYWORDS = {
+                        "nether", "crimson", "warped", "basalt", "blackstone", "quartz", "soul", "magma", "shroomlight",
+                        "ancient_debris", "nylium", "fungus", "roots", "wart"
+        };
+        private static final String[] END_KEYWORDS = {
+                        "end", "purpur", "chorus", "shulker", "dragon", "end_rod"
+        };
+        private static final String[] SAND_KEYWORDS = {
+                        "sand", "sandstone", "terracotta", "clay", "mud", "gravel"
+        };
 
-	private static final List<CategoryDefinition> DEFINITIONS = List.of(
-			CategoryDefinition.builder("structure_wood", () -> new ItemStack(Items.OAK_PLANKS))
-					.source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodConstruction)
-					.source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodFromNature)
-					.arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
-					.build(),
-			CategoryDefinition.builder("structure_masonry", () -> new ItemStack(Items.STONE_BRICKS))
-					.source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isMasonryBlock)
-					.build(),
-			CategoryDefinition.builder("materials_copper", () -> new ItemStack(Items.COPPER_BLOCK))
-					.source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
-					.source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
-					.build(),
-			CategoryDefinition.builder("structure_misc", () -> new ItemStack(Items.QUARTZ_BRICKS))
-					.source(GROUP_BUILDING_BLOCKS, stack -> true)
-					.build(),
+        private static final List<CategoryDefinition> DEFINITIONS = List.of(
+                        CategoryDefinition.builder("dimension_nether", () -> new ItemStack(Items.NETHERRACK))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isNetherBlock)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isNetherBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
+                        CategoryDefinition.builder("dimension_end", () -> new ItemStack(Items.END_STONE))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isEndBlock)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isEndBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
+                        CategoryDefinition.builder("structure_wood", () -> new ItemStack(Items.OAK_PLANKS))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isWoodConstruction)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isWoodFromNature)
+                                        .arranger(BlockFilterCreativeLayout::arrangeWoodStructures)
+                                        .build(),
+                        CategoryDefinition.builder("structure_stone", () -> new ItemStack(Items.STONE_BRICKS))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isStoneBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
+                        CategoryDefinition.builder("structure_sand", () -> new ItemStack(Items.SANDSTONE))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isSandBlock)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isSandBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
+                        CategoryDefinition.builder("materials_copper", () -> new ItemStack(Items.COPPER_BLOCK))
+                                        .source(GROUP_BUILDING_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
+                                        .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isCopperItem)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
+                        CategoryDefinition.builder("structure_misc", () -> new ItemStack(Items.QUARTZ_BRICKS))
+                                        .source(GROUP_BUILDING_BLOCKS, stack -> true)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
+                                        .build(),
                         CategoryDefinition.builder("structure_colored", () -> new ItemStack(Items.RED_CONCRETE))
                                         .source(GROUP_COLORED_BLOCKS, stack -> true)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
                                         .build(),
                         CategoryDefinition.builder("nature_resources", () -> new ItemStack(Items.GRASS_BLOCK))
-                                        .source(GROUP_NATURAL_BLOCKS, stack -> true)
+                                        .source(GROUP_NATURAL_BLOCKS, BlockFilterCreativeLayout::isOverworldNature)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
                                         .build(),
                         CategoryDefinition.builder("workstations_storage", () -> new ItemStack(Items.CRAFTING_TABLE))
                                         .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isWorkstationOrStorage)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
                                         .build(),
                         CategoryDefinition.builder("utility_mobility", () -> new ItemStack(Items.SCAFFOLDING))
                                         .source(GROUP_FUNCTIONAL_BLOCKS, BlockFilterCreativeLayout::isUtilityBlock)
+                                        .arranger(BlockFilterCreativeLayout::arrangeVariants)
                                         .build());
 
 	private static LayoutSnapshot snapshot;
@@ -347,20 +383,20 @@ private static final class SourceRule {
 		return containsAny(path, "log", "wood", "leaves", "sapling", "fungus", "hyphae", "propagule", "bamboo", "vine", "moss", "azalea");
 	}
 
-	private static boolean isMasonryBlock(ItemStack stack) {
-		if (shouldOmit(stack)) {
-			return false;
-		}
+        private static boolean isStoneBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
 		Item item = stack.getItem();
 		if (!(item instanceof net.minecraft.item.BlockItem)) {
 			return false;
 		}
 
-		String path = pathOf(item);
-		return containsAny(path, "stone", "brick", "deepslate", "granite", "andesite", "diorite", "blackstone", "basalt",
-				"sandstone", "terracotta", "concrete", "calcite", "tuff", "clay", "slate", "marble", "tile", "pillar",
-				"cobblestone", "mud_brick", "resin", "prismarine", "quartz");
-	}
+                String path = pathOf(item);
+                return containsAny(path, "stone", "brick", "deepslate", "granite", "andesite", "diorite", "blackstone", "basalt",
+                                "calcite", "tuff", "slate", "marble", "tile", "pillar", "cobblestone", "mud_brick", "resin", "prismarine",
+                                "quartz") && !containsAny(path, SAND_KEYWORDS);
+        }
 
         private static boolean isWorkstationOrStorage(ItemStack stack) {
 		if (shouldOmit(stack)) {
@@ -393,16 +429,64 @@ private static final class SourceRule {
 				"hanging_sign", "crate") || item == Items.BEACON;
 	}
 
-	private static boolean isCopperItem(ItemStack stack) {
-		return pathOf(stack.getItem()).contains("copper");
-	}
+        private static boolean isCopperItem(ItemStack stack) {
+                return pathOf(stack.getItem()).contains("copper");
+        }
 
-	private static String pathOf(Item item) {
-		Identifier id = Registries.ITEM.getId(item);
-		return id == null ? "" : id.getPath().toLowerCase(Locale.ROOT);
-	}
+        private static boolean isNetherBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
 
-	private static List<ItemStack> arrangeWoodStructures(List<ItemStack> stacks) {
+                String path = pathOf(item);
+                return containsAny(path, NETHER_KEYWORDS);
+        }
+
+        private static boolean isEndBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
+
+                String path = pathOf(item);
+                return containsAny(path, END_KEYWORDS);
+        }
+
+        private static boolean isSandBlock(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                if (!(item instanceof net.minecraft.item.BlockItem)) {
+                        return false;
+                }
+
+                String path = pathOf(item);
+                return containsAny(path, SAND_KEYWORDS);
+        }
+
+        private static boolean isOverworldNature(ItemStack stack) {
+                if (shouldOmit(stack)) {
+                        return false;
+                }
+                Item item = stack.getItem();
+                String path = pathOf(item);
+                return !containsAny(path, NETHER_KEYWORDS) && !containsAny(path, END_KEYWORDS);
+        }
+
+        private static String pathOf(Item item) {
+                Identifier id = Registries.ITEM.getId(item);
+                return id == null ? "" : id.getPath().toLowerCase(Locale.ROOT);
+        }
+
+        private static List<ItemStack> arrangeWoodStructures(List<ItemStack> stacks) {
 		Map<String, Map<String, ItemStack>> table = new LinkedHashMap<>();
 		for (String base : WOOD_BASES) {
 			table.put(base, new LinkedHashMap<>());
@@ -447,12 +531,37 @@ private static final class SourceRule {
 			}
 		}
 
-		arranged.addAll(leftovers);
-		return arranged;
-	}
+                arranged.addAll(arrangeVariants(leftovers));
+                return arranged;
+        }
 
-	private static boolean containsAny(String haystack, String... needles) {
-		for (String needle : needles) {
+        private static List<ItemStack> arrangeVariants(List<ItemStack> stacks) {
+                List<ItemStack> arranged = new ArrayList<>(stacks);
+                arranged.sort(Comparator.comparing((ItemStack stack) -> normalizedVariantKey(pathOf(stack.getItem())))
+                                .thenComparing(stack -> pathOf(stack.getItem())));
+                return arranged;
+        }
+
+        private static String normalizedVariantKey(String path) {
+                if (path.isEmpty()) {
+                        return path;
+                }
+
+                String[] parts = path.split("_");
+                int start = 0;
+                while (start < parts.length && VARIANT_PREFIXES.contains(parts[start])) {
+                        start++;
+                }
+
+                if (start == 0) {
+                        return path;
+                }
+
+                return String.join("_", Arrays.copyOfRange(parts, start, parts.length));
+        }
+
+        private static boolean containsAny(String haystack, String... needles) {
+                for (String needle : needles) {
 			if (haystack.contains(needle)) {
 				return true;
 			}
