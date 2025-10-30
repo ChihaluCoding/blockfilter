@@ -75,7 +75,7 @@ final class BlockFilterCreativeLayout {
                         "mosaic", "log", "wood", "stem", "hyphae", "boat", "chest_boat",
                         "raft", "chest_raft", "leaves", "sapling", "propagule", "roots", "fungus",
                         "panel", "tile", "tiles", "bricks", "brick", "pane", "glass", "bars",
-                        "torch", "lantern", "campfire", "beacon", "grate", "bulb"
+                        "chain", "torch", "lantern", "campfire", "beacon", "grate", "bulb"
         );
         private static final List<String> STONE_BASES = List.of(
                         "stone", "smooth_stone", "stone_brick", "stone_bricks", "cobblestone", "granite", "polished_granite",
@@ -94,7 +94,7 @@ final class BlockFilterCreativeLayout {
                         "copper_block", "cut_copper", "chiseled_copper", "copper", "raw_copper_block"
         );
         private static final List<String> COPPER_SHAPE_ORDER = List.of(
-                        "", "stairs", "slab", "door", "trapdoor", "bars", "grate", "bulb"
+                        "", "stairs", "slab", "door", "trapdoor", "bars", "chain", "grate", "bulb"
         );
         private static final List<String> COPPER_VARIANT_ORDER = List.of(
                         "", "exposed", "weathered", "oxidized", "waxed", "waxed_exposed", "waxed_weathered", "waxed_oxidized"
