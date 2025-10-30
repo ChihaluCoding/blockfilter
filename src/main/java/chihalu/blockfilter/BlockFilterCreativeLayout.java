@@ -450,7 +450,7 @@ private static final class SourceRule {
         }
 
         private static List<ItemStack> arrangeWoodStructures(List<ItemStack> stacks) {
-                Map<String, Map<String, List<ItemStack>>> byShape = new LinkedHashMap<>();
+                Map<String, Map<String, Map<String, List<ItemStack>>>> byShape = new LinkedHashMap<>();
                 Map<String, List<ItemStack>> byBaseFallback = new LinkedHashMap<>();
                 List<ItemStack> noBase = new ArrayList<>();
 
@@ -468,22 +468,25 @@ private static final class SourceRule {
                                 continue;
                         }
 
+                        String variant = detectWoodVariant(path);
+
                         byShape.computeIfAbsent(shape, ignored -> new LinkedHashMap<>())
+                                        .computeIfAbsent(variant, ignored -> new LinkedHashMap<>())
                                         .computeIfAbsent(base, ignored -> new ArrayList<>()).add(stack);
                 }
 
                 List<ItemStack> arranged = new ArrayList<>();
 
                 for (String shape : WOOD_SHAPE_ORDER) {
-                        Map<String, List<ItemStack>> baseBuckets = byShape.remove(shape);
-                        if (baseBuckets == null || baseBuckets.isEmpty()) {
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets = byShape.remove(shape);
+                        if (variantBuckets == null || variantBuckets.isEmpty()) {
                                 continue;
                         }
-                        appendBaseBuckets(arranged, baseBuckets);
+                        appendVariantBuckets(arranged, variantBuckets);
                 }
 
-                for (Map<String, List<ItemStack>> remaining : byShape.values()) {
-                        appendBaseBuckets(arranged, remaining);
+                for (Map<String, Map<String, List<ItemStack>>> remaining : byShape.values()) {
+                        appendVariantBuckets(arranged, remaining);
                 }
 
                 appendBaseBuckets(arranged, byBaseFallback);
@@ -491,6 +494,24 @@ private static final class SourceRule {
                 noBase.sort(Comparator.comparing(stack -> pathOf(stack.getItem())));
                 arranged.addAll(noBase);
                 return arranged;
+        }
+
+        private static void appendVariantBuckets(List<ItemStack> arranged,
+                        Map<String, Map<String, List<ItemStack>>> variantBuckets) {
+                Map<String, List<ItemStack>> baseBuckets = variantBuckets.remove("");
+                if (baseBuckets != null && !baseBuckets.isEmpty()) {
+                        appendBaseBuckets(arranged, baseBuckets);
+                }
+
+                List<Map.Entry<String, Map<String, List<ItemStack>>>> leftovers = new ArrayList<>(variantBuckets.entrySet());
+                leftovers.sort(Map.Entry.comparingByKey());
+                for (Map.Entry<String, Map<String, List<ItemStack>>> entry : leftovers) {
+                        Map<String, List<ItemStack>> buckets = entry.getValue();
+                        if (buckets == null || buckets.isEmpty()) {
+                                continue;
+                        }
+                        appendBaseBuckets(arranged, buckets);
+                }
         }
 
         private static void appendBaseBuckets(List<ItemStack> arranged, Map<String, List<ItemStack>> baseBuckets) {
@@ -522,14 +543,14 @@ private static final class SourceRule {
         private static List<ItemStack> arrangeVariants(List<ItemStack> stacks) {
                 List<ItemStack> arranged = new ArrayList<>(stacks);
                 arranged.sort(Comparator
-				.comparing((ItemStack stack) -> familyKey(pathOf(stack.getItem())))
-				.thenComparing(stack -> shapeKey(pathOf(stack.getItem())))
-				.thenComparing(stack -> normalizedVariantKey(pathOf(stack.getItem())))
-				.thenComparing(stack -> pathOf(stack.getItem())));
+                                .comparing((ItemStack stack) -> familyKey(pathOf(stack.getItem())))
+                                .thenComparing(stack -> shapeKey(pathOf(stack.getItem())))
+                                .thenComparing(stack -> normalizedVariantKey(pathOf(stack.getItem())))
+                                .thenComparing(stack -> pathOf(stack.getItem())));
                 return arranged;
         }
 
-	private static String detectWoodBase(String path) {
+        private static String detectWoodBase(String path) {
 		String best = "";
 		int bestLength = -1;
 		for (String base : WOOD_BASES) {
@@ -546,14 +567,28 @@ private static final class SourceRule {
 			if (matchesSegment(path, shape)) {
 				return shape;
 			}
-		}
-		return "";
-	}
+                }
+                return "";
+        }
 
-	private static String familyKey(String path) {
-		String normalized = normalizedVariantKey(path);
-		for (String suffix : COMMON_SHAPE_SUFFIXES) {
-			if (normalized.endsWith("_" + suffix)) {
+        private static String detectWoodVariant(String path) {
+                if (path.isEmpty()) {
+                        return "";
+                }
+
+                String[] parts = path.split("_");
+                if (parts.length == 0) {
+                        return "";
+                }
+
+                String candidate = parts[0];
+                return VARIANT_PREFIXES.contains(candidate) ? candidate : "";
+        }
+
+        private static String familyKey(String path) {
+                String normalized = normalizedVariantKey(path);
+                for (String suffix : COMMON_SHAPE_SUFFIXES) {
+                        if (normalized.endsWith("_" + suffix)) {
 				return normalized.substring(0, normalized.length() - suffix.length() - 1);
 			}
 		}
